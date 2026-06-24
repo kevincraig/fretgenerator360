@@ -18,13 +18,26 @@ You can use this generator as a base for you guitardesign, as it draws a centre 
 If you like this plugin and/or have suggestions for improvements, you're welcome to let me know. Have fun drawing!
 
 # Installation:
-Copy all files to your Addin folder of Fusion360
+Fusion 360 requires the containing folder, the `.py` file, and the `.manifest`
+file to all share the same base name. Copy the files into a folder named
+**exactly** `Fret Generator`, so the layout looks like this:
 
-On Windows, these are the folder paths:
-For an Add-In, %appdata%\Autodesk\Autodesk Fusion 360\API\AddIns
+    AddIns/
+      Fret Generator/
+        Fret Generator.py
+        Fret Generator.manifest
+        Resources/
 
-On macOS, these are the folder paths:
-For an add-in, the path is ~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns
+If the folder name does not match `Fret Generator.py` / `Fret Generator.manifest`,
+Fusion 360 will not list the add-in.
+
+The AddIns folder is located here:
+
+On Windows:
+%appdata%\Autodesk\Autodesk Fusion 360\API\AddIns
+
+On macOS:
+~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns
 
 # Launch plugin:
 Locate the plugin in the addin-panel of Fusion360 and press RUN.

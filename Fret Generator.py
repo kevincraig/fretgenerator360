@@ -13,8 +13,13 @@ def drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius)
     # DRAWING STARTS HERE
     # Get the root component of the active design.
     app = adsk.core.Application.get()
-    design = app.activeProduct
-    rootComp = design.rootComponent        
+    # Make sure the active product is actually a Fusion Design. If the user
+    # runs this from another workspace (Drawing, Render, etc.) activeProduct is
+    # not a Design and accessing rootComponent would throw.
+    design = adsk.fusion.Design.cast(app.activeProduct)
+    if not design:
+        return False
+    rootComp = design.rootComponent
     # Create a new sketch on the xy plane.
     sketches = rootComp.sketches;                                           
     xyPlane = rootComp.xYConstructionPlane
@@ -303,9 +308,18 @@ class SampleCommandExecutePreviewHandler(adsk.core.CommandEventHandler):
             # Get the command
             cmd = eventArgs.command
     
-            # Get the CommandInputs collection to create new command inputs.            
+            # Get the CommandInputs collection to create new command inputs.
             inputs = cmd.commandInputs
-            
+
+            # Only draw when a Fusion Design is active. Otherwise tell the user
+            # via the text box rather than failing on every preview tick.
+            design = adsk.fusion.Design.cast(app.activeProduct)
+            if not design:
+                errBox = inputs.itemById('errmessage')
+                if errBox:
+                    errBox.text = 'Switch to the Design workspace to draw the fretboard.'
+                return
+
             slanted = inputs.itemById('slanted').value
             if slanted == False:    
                 scalehigh = inputs.itemById('scalehigh').value        
