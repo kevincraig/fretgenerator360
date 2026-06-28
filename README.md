@@ -52,6 +52,7 @@ The plugin will stay resident in the addinpanel as long as its running.
 - Width - the width of the fret board
 - Show dots - will reveal and draw the positiondots
 - Diameter - the diameters of the dots
+- Nut on right - rotates the whole board 180 degrees so the nut end faces right (checked by default; uncheck for nut on the left)
 - Draws a scale construction line in the centre of the fretboard
 - Draws a line to indicate centre and direction of bridge/tremolo
 

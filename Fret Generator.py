@@ -9,7 +9,7 @@ import adsk.core, adsk.fusion, adsk.cam, traceback
 # This is only needed with Python.
 handlers = []
 
-def drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius):
+def drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius, flip):
     # DRAWING STARTS HERE
     # Get the root component of the active design.
     app = adsk.core.Application.get()
@@ -21,25 +21,32 @@ def drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius)
         return False
     rootComp = design.rootComponent
     # Create a new sketch on the xy plane.
-    sketches = rootComp.sketches;                                           
+    sketches = rootComp.sketches;
     xyPlane = rootComp.xYConstructionPlane
     sketch = sketches.add(xyPlane)
-    
-    
+
+    # When flip is True the whole sketch is rotated 180 degrees about the
+    # origin (x and y both negated) so the nut end faces right instead of
+    # left. A true rotation (not a mirror) keeps slanted/multiscale boards
+    # the same handedness. pt() applies this to every point we draw.
+    s = -1 if flip else 1
+    def pt(x, y):
+        return adsk.core.Point3D.create(s * x, s * y, 0)
+
     yup = 0- fretwidth / 2
     ydown =  fretwidth / 2
     lines = sketch.sketchCurves.sketchLines;
     # draw scalelines high and low
-    lines.addByTwoPoints(adsk.core.Point3D.create(0, yup, 0), adsk.core.Point3D.create(scalehigh, yup, 0))
-    lines.addByTwoPoints(adsk.core.Point3D.create(0 - fretoffset, ydown, 0), adsk.core.Point3D.create(scalelow - fretoffset, ydown, 0))
+    lines.addByTwoPoints(pt(0, yup), pt(scalehigh, yup))
+    lines.addByTwoPoints(pt(0 - fretoffset, ydown), pt(scalelow - fretoffset, ydown))
     #draw tremolo position line  
-    lines.addByTwoPoints(adsk.core.Point3D.create(scalehigh, yup, 0), adsk.core.Point3D.create(scalelow - fretoffset, ydown, 0))
+    lines.addByTwoPoints(pt(scalehigh, yup), pt(scalelow - fretoffset, ydown))
     #draw center construction line
     xconstructionstart = (0 - fretoffset) / 2
     yconstructionstart = 0
     xconstructionend = ((scalehigh + (scalelow - fretoffset)) /2)
     yconstructionend = 0
-    line1 = lines.addByTwoPoints(adsk.core.Point3D.create(xconstructionstart, yconstructionstart, 0), adsk.core.Point3D.create(xconstructionend, yconstructionend, 0))    
+    line1 = lines.addByTwoPoints(pt(xconstructionstart, yconstructionstart), pt(xconstructionend, yconstructionend))
     line1.isConstruction = True
     
     # draw individual frets
@@ -48,7 +55,7 @@ def drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius)
         #draw fretlines        
         distancehigh = scalehigh - (scalehigh / 2 ** (n/12))
         distancelow = scalelow - fretoffset - (scalelow / 2 ** (n/12)) 
-        lines.addByTwoPoints(adsk.core.Point3D.create(distancehigh, yup, 0), adsk.core.Point3D.create(distancelow, ydown, 0))        
+        lines.addByTwoPoints(pt(distancehigh, yup), pt(distancelow, ydown))
         #counter        
         n = n + 1 
         if n == fretno:
@@ -69,7 +76,7 @@ def drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius)
                 if s == 1:
                     #draw dot
                     circles = sketch.sketchCurves.sketchCircles
-                    circles.addByCenterRadius(adsk.core.Point3D.create(xcentre, ycentre, 0), radius)
+                    circles.addByCenterRadius(pt(xcentre, ycentre), radius)
                 if s == 2:
                     #calculate x position dots
                     xdistance = xcentrehigh - xcentrelow
@@ -84,8 +91,8 @@ def drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius)
                     ycirclebottom = (0 -fretwidth / 2) + (fretwidth * (2/3))  
                     #draw dots
                     circles = sketch.sketchCurves.sketchCircles
-                    circles.addByCenterRadius(adsk.core.Point3D.create(xcircletop, ycircletop, 0), radius)
-                    circles.addByCenterRadius(adsk.core.Point3D.create(xcirclebottom, ycirclebottom, 0), radius)  
+                    circles.addByCenterRadius(pt(xcircletop, ycircletop), radius)
+                    circles.addByCenterRadius(pt(xcirclebottom, ycirclebottom), radius)
             n = n + 1 
             if n == fretno:
                 break
@@ -236,8 +243,12 @@ class SampleCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
     
             # Create the value input to get the dotsize
             dotsize = inputs.addValueInput('dotsize', 'Diameter', 'mm', adsk.core.ValueInput.createByReal(0.4))
-            dotsize.isVisible = False  
-                                        
+            dotsize.isVisible = False
+
+            # Create a check box to flip the board 180 degrees so the nut end
+            # faces right. Defaults to checked. Uncheck for nut on the left.
+            inputs.addBoolValueInput('flip', 'Nut on right', True, '', True)
+
             #errMessage = inputs.addTextBoxCommandInput('errMessage', '', '', 2, True)
             errMessage = inputs.addTextBoxCommandInput('errmessage', 'Text Box 1', '', 2, True)
             errMessage.isFullWidth = True                                    
@@ -343,8 +354,10 @@ class SampleCommandExecutePreviewHandler(adsk.core.CommandEventHandler):
                 dots = True
               
             radius = inputs.itemById('dotsize').value /2
-            
-            drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius)
+
+            flip = inputs.itemById('flip').value
+
+            drawSketch(scalehigh, scalelow, fretno, fretwidth, fretoffset, dots, radius, flip)
             
             # Set the isValidResult property to use these results at the final result.
             # This will result in the execute event not being fired.
